@@ -1,0 +1,176 @@
+---
+title: "Classification of TenYearCHD"
+author: "Isselmou Nemine"
+date: "3/29/2021"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(caTools)
+library(ROCR)
+```
+
+## Understanding the problem
+
+CHD is Coronary Heart Disease, an illness killing millions of people every year. It is critical to understand the risk factors leading to this condition and come up with ways to prevent it.
+
+The data was collected in 1940s when not much was known about this illness. 
+
+## Data Analysis
+
+### Importing the data
+
+We import the data and look at the structure and summary of the variables.
+
+```{r}
+df = read.csv("framingham.csv")
+str(df)
+```
+Time to check the summary of the data to get a first impression of the variable distributions.
+
+```{r}
+summary(df)
+```
+Your initial analysis goes here... 15% of the people had CHD in ten years.
+
+Let us see how many NA values we have in the data set:
+
+```{r}
+sum(is.na(df))
+```
+## Cleaning the data
+
+645 NA is around 15% of the whole data set. Shall we delete all of them?
+
+Create a new data frame elimination NA entries
+
+```{r}
+library(dplyr)
+df2 = na.omit(df)
+```
+
+## Association Analysis
+
+To determine the associations between variables we can look at correlation values and also graphs. Because there are categorical variables, we must use "spearman" as our correlation method.
+
+```{r}
+library(corrplot)
+cor_matrix = cor(df2, method = "spearman")
+cor_matrix
+corrplot.mixed(cor_matrix)
+```
+We decided to continue with the df2 data frame. We see that some of the independent variables are clearly correlated to TenYearCHD. For example, age ~ TenYearCHD. We can observe these relationships through propoer plots, too.
+
+```{r}
+ggplot(df2, aes(age, as.factor(TenYearCHD))) + geom_boxplot() + coord_flip()
+ggplot(df2, aes(totChol, as.factor(TenYearCHD))) + geom_boxplot() + coord_flip()
+ggplot(df2, aes(sysBP, as.factor(TenYearCHD))) + geom_boxplot() + coord_flip()
+```
+
+## Logistic Regression Model Generation and Assessment
+
+## Creating randomly assigned train and test data sets:
+
+```{r}
+library(caTools)
+set.seed(123)
+split = sample.split (df2$TenYearCHD, SplitRatio = 0.80) 
+train = subset(df2, split == TRUE)
+test = subset(df2, split == FALSE)
+```
+
+## Create the first model
+
+```{r}
+model1 = glm(TenYearCHD ~ age, family = binomial, train) 
+summary(model1)
+```
+Let us predict outcome using our first model:
+
+```{r}
+predicted1 = predict(model1, type = "response", test)
+plot(predicted1)
+predicted1_cat = ifelse(predicted1 > 0.25, 1, 0)
+```
+
+Table analysis to see what mistakes this model makes...
+
+```{r}
+table(test$TenYearCHD, predicted1_cat)
+```
+
+What is my base model accuracy? It is around 85%. What do you think about the performance of your model?
+
+We can try and see which threshold value gives us the optimum prediction. This becames easier with an ROC curve:
+
+```{r}
+library(ROCR) # ROC will show us the overall performance of the model
+ROCRpred = prediction (predicted1, test$TenYearCHD)
+as.numeric (performance (ROCRpred, "auc") @y.values) # higher auc value is better
+ROCRperf = performance (ROCRpred, "tpr", "fpr")
+plot (ROCRperf, colorize = TRUE, print.cutoffs.at = seq (0, 1, by = 0.1), text.adj = c(-0.2, 1.7))
+```
+
+
+## Create the second model and compare them
+
+```{r}
+model2 = glm(TenYearCHD ~ age + prevalentHyp + sysBP, family = binomial, train) 
+summary(model2)
+```
+Let us predict outcome using our first model:
+
+```{r}
+predicted2 = predict(model2, type = "response", test)
+plot(predicted2)
+predicted2_cat = ifelse(predicted2 > 0.25, 1, 0)
+```   
+
+Table analysis to see what mistakes this model makes...
+
+```{r}
+table(test$TenYearCHD, predicted2_cat)
+```
+
+
+
+```{r}
+library(ROCR) # ROC will show us the overall performance of the model
+ROCRpred = prediction (predicted2, test$TenYearCHD)
+as.numeric (performance (ROCRpred, "auc") @y.values) # higher auc value is better
+ROCRperf = performance (ROCRpred, "tpr", "fpr")
+plot (ROCRperf, colorize = TRUE, print.cutoffs.at = seq (0, 1, by = 0.1), text.adj = c(-0.2, 1.7))
+```
+## Third model including all independent variables...
+
+```{r}
+model3 = glm(TenYearCHD ~ ., family = binomial, train) 
+summary(model3)
+```
+
+```{r}
+predicted3 = predict(model3, type = "response", test)
+plot(predicted3)
+predicted3_cat = ifelse(predicted3 > 0.20, 1, 0)
+```
+
+
+```{r}
+table(test$TenYearCHD, predicted3_cat)
+```
+
+```{r}
+library(ROCR) # ROC will show us the overall performance of the model
+ROCRpred = prediction (predicted3, test$TenYearCHD )
+as.numeric (performance (ROCRpred, "auc") @y.values) # higher auc value is better
+ROCRperf = performance (ROCRpred, "tpr", "fpr")
+plot (ROCRperf, colorize = TRUE, print.cutoffs.at = seq (0, 1, by = 0.1), text.adj = c(-0.2, 1.7))
+```
+# Results and final Assessments
+
+Which model predict best? AUC values? What about accuracy rate, true positive rate, false positive rate? What was important for you? Possible implications?
+
+
