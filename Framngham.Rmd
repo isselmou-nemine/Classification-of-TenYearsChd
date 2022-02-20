@@ -169,8 +169,5 @@ as.numeric (performance (ROCRpred, "auc") @y.values) # higher auc value is bette
 ROCRperf = performance (ROCRpred, "tpr", "fpr")
 plot (ROCRperf, colorize = TRUE, print.cutoffs.at = seq (0, 1, by = 0.1), text.adj = c(-0.2, 1.7))
 ```
-# Results and final Assessments
-
-Which model predict best? AUC values? What about accuracy rate, true positive rate, false positive rate? What was important for you? Possible implications?
 
 
